@@ -1,0 +1,90 @@
+diff --git a/judge/judgedaemon.main.php b/judge/judgedaemon.main.php
+index 64d782a..08067ed 100644
+--- a/judge/judgedaemon.main.php
++++ b/judge/judgedaemon.main.php
+@@ -848,7 +848,7 @@ while (true) {
+                     }
+                 }
+             }
+-            if (!empty($judgeTask['testcase_id'])) {
++            if (!empty($judgeTask['testcase_id']) && ($judgeTask['ephemeral'] ?? false) !== true) {
+                 fetchTestcase($workdirpath, $judgeTask['testcase_id'], $judgeTask['judgetaskid'], $judgeTask['testcase_hash']);
+             }
+         }
+@@ -980,7 +980,11 @@ while (true) {
+     // Make sure the workdir is accessible for the domjudge-run user.
+     // Will be revoked again after this run finished.
+     foreach ($row as $judgetask) {
+-        if (!judge($judgetask)) {
++        $judgingSucceeded = judge($judgetask);
++        if (($judgetask['ephemeral'] ?? false) === true) {
++            cleanupEphemeralTestcase($workdirpath, $judgetask['judgetaskid']);
++        }
++        if (!$judgingSucceeded) {
+             // Potentially return remaining outstanding judgetasks here.
+             $returnedJudgings = request('judgehosts', 'POST', 'hostname=' . urlencode($myhost), false);
+             if ($returnedJudgings !== null) {
+@@ -1027,11 +1031,14 @@ function registerJudgehost(string $myhost): void
+ 
+     // Create directory where to test submissions
+     $workdirpath = JUDGEDIR . "/$myhost/endpoint-$endpointID";
+-    system('mkdir -p ' . dj_escapeshellarg("$workdirpath/testcase"), $retval);
++    cleanupEphemeralTestcase($workdirpath);
++    system('mkdir -p ' . dj_escapeshellarg("$workdirpath/testcase") . ' ' .
++        dj_escapeshellarg("$workdirpath/ephemeral-testcase"), $retval);
+     if ($retval !== 0) {
+         error("Could not create $workdirpath");
+     }
+     chmod("$workdirpath/testcase", 0700);
++    chmod("$workdirpath/ephemeral-testcase", 0700);
+ 
+     // Auto-register judgehost.
+     // If there are any unfinished judgings in the queue in my name,
+@@ -1382,7 +1389,7 @@ function judge(array $judgeTask): bool
+ 
+     logmsg(LOG_INFO, "  🏃 Running testcase $judgeTask[testcase_id]...");
+     $testcasedir = $workdir . "/testcase" . sprintf('%05d', $judgeTask['testcase_id']);
+-    $tcfile = fetchTestcase($workdirpath, $judgeTask['testcase_id'], $judgeTask['judgetaskid'], $judgeTask['testcase_hash']);
++    $tcfile = fetchTestcase($workdirpath, $judgeTask['testcase_id'], $judgeTask['judgetaskid'], $judgeTask['testcase_hash'], ($judgeTask['ephemeral'] ?? false) === true);
+     if ($tcfile === null) {
+         // error while fetching testcase
+         return false;
+@@ -1600,13 +1607,15 @@ function judge(array $judgeTask): bool
+     return $ret;
+ }
+ 
+-function fetchTestcase(string $workdirpath, string $testcase_id, int $judgetaskid, string $testcase_hash): ?array
++function fetchTestcase(string $workdirpath, string $testcase_id, int $judgetaskid, string $testcase_hash, bool $ephemeral = false): ?array
+ {
+     // Get both in- and output files, only if we didn't have them already.
+     $tcfile = [];
+-    $bothFilesExist = true;
++    $bothFilesExist = !$ephemeral;
++    $testcasedir = $ephemeral
++        ? $workdirpath . '/ephemeral-testcase/' . $judgetaskid
++        : $workdirpath . '/testcase/' . $testcase_id;
+     foreach (['input', 'output'] as $inout) {
+-        $testcasedir = $workdirpath . '/testcase/' . $testcase_id;
+         if (!is_dir($testcasedir)) {
+             mkdir($testcasedir, 0755, true);
+         }
+@@ -1638,3 +1647,19 @@ function fetchTestcase(string $workdirpath, string $testcase_id, int $judgetaski
+     logmsg(LOG_INFO, "  💾 Fetched new testcase $testcase_id.");
+     return $tcfile;
+ }
++
++function cleanupEphemeralTestcase(string $workdirpath, ?int $judgetaskid = null): void
++{
++    $testcasedir = $workdirpath . '/ephemeral-testcase';
++    if ($judgetaskid !== null) {
++        $testcasedir .= '/' . $judgetaskid;
++    }
++    if (!is_dir($testcasedir)) {
++        return;
++    }
++
++    system('rm -rf ' . dj_escapeshellarg($testcasedir), $retval);
++    if ($retval !== 0) {
++        warning("Deleting ephemeral testcase directory '$testcasedir' was unsuccessful.");
++    }
++}

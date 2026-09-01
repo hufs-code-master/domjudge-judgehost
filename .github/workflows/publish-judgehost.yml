@@ -1,0 +1,56 @@
+name: Publish judgehost
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/publish-judgehost.yml
+      - docker/build-judgehost.sh
+      - docker/judgehost/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-judgehost
+  cancel-in-progress: true
+
+env:
+  DOMJUDGE_VERSION: 9.0.0
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download DOMjudge
+        working-directory: docker
+        run: |
+          wget --quiet "https://www.domjudge.org/releases/domjudge-${DOMJUDGE_VERSION}.tar.gz" -O domjudge.tar.gz
+          echo "8c4a0e2515ffd16b2cc21b7b09afaf29c4d1672ea7fbc0c596bcae38bc3c793e  domjudge.tar.gz" | sha256sum --check -
+
+      - name: Build judgehost
+        working-directory: docker
+        run: ./build-judgehost.sh "${IMAGE_NAME}:${DOMJUDGE_VERSION}"
+
+      - name: Push judgehost
+        run: |
+          SHA_TAG="sha-${GITHUB_SHA::12}"
+          docker tag "${IMAGE_NAME}:${DOMJUDGE_VERSION}" "${IMAGE_NAME}:${SHA_TAG}"
+          docker push "${IMAGE_NAME}:${DOMJUDGE_VERSION}"
+          docker push "${IMAGE_NAME}:${SHA_TAG}"
+          docker tag "${IMAGE_NAME}:${DOMJUDGE_VERSION}" "${IMAGE_NAME}:latest"
+          docker push "${IMAGE_NAME}:latest"

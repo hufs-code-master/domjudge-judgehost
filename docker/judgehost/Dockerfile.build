@@ -28,9 +28,23 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
 # Add DOMjudge source code and build script
 ADD domjudge.tar.gz /domjudge-src
 ADD judgehost/build.sh /domjudge-src
+COPY judgehost/patches/ephemeral-testcase.patch /domjudge-src/ephemeral-testcase.patch
+
+RUN cd /domjudge-src/domjudge* \
+	&& git apply --check /domjudge-src/ephemeral-testcase.patch \
+	&& git apply /domjudge-src/ephemeral-testcase.patch \
+	&& php -l judge/judgedaemon.main.php
 
 # Build and install judgehost
 RUN /domjudge-src/build.sh
+
+ADD --checksum=sha256:855d581f8a4eb1a8117e3426de25fe02770592febcfb31369aee1ffbfee9e8ec \
+	https://nodejs.org/download/release/v24.20.0/node-v24.20.0-linux-x64.tar.gz \
+	/opt/node-v24.20.0-linux-x64.tar.gz
+
+ADD --checksum=sha256:81f0264c9073b5cbbdb3ff8418cf2c5dac076879fc156fa1a6462f5a5acc4420 \
+	https://github.com/JetBrains/kotlin/releases/download/v2.2.20/kotlin-compiler-2.2.20.zip \
+	/opt/kotlin-compiler.zip
 
 # We need to mount proc, which is not possible in "docker build". Thus we need to run this when starting the container
 COPY ["judgehost/chroot-and-tar.sh", "/scripts/"]
