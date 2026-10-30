@@ -1,5 +1,7 @@
 FROM ubuntu:24.04
-LABEL org.opencontainers.image.authors="DOMjudge team <team@domjudge.org>"
+LABEL org.opencontainers.image.authors="DOMjudge team <team@domjudge.org>" \
+      org.opencontainers.image.source="https://github.com/hufs-code-master/domjudge-judgehost" \
+      kr.ac.hufs.codemaster.graceful-stop="1"
 
 ENV DEBIAN_FRONTEND=noninteractive \
 	CONTAINER_TIMEZONE=Europe/Amsterdam \
@@ -38,5 +40,5 @@ ENV PATH="$PATH:/opt/domjudge/judgehost/bin"
 COPY judgehost/configure.sh /configure.sh
 RUN chmod 700 /configure.sh && /configure.sh && rm -f /configure.sh
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--single-child", "--"]
 CMD ["/scripts/start.sh"]
