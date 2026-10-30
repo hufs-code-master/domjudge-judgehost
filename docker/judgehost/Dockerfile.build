@@ -38,9 +38,9 @@ RUN cd /domjudge-src/domjudge* \
 # Build and install judgehost
 RUN /domjudge-src/build.sh
 
-ADD --checksum=sha256:855d581f8a4eb1a8117e3426de25fe02770592febcfb31369aee1ffbfee9e8ec \
-	https://nodejs.org/download/release/v24.20.0/node-v24.20.0-linux-x64.tar.gz \
-	/opt/node-v24.20.0-linux-x64.tar.gz
+ADD --checksum=sha256:361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9 \
+	https://nodejs.org/download/release/v24.22.2/node-v24.22.2-linux-x64.tar.gz \
+	/opt/node-v24.22.2-linux-x64.tar.gz
 
 ADD --checksum=sha256:81f0264c9073b5cbbdb3ff8418cf2c5dac076879fc156fa1a6462f5a5acc4420 \
 	https://github.com/JetBrains/kotlin/releases/download/v2.2.20/kotlin-compiler-2.2.20.zip \
