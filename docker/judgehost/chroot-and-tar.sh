@@ -3,7 +3,9 @@
 set -euo pipefail
 
 # Usage: https://github.com/DOMjudge/domjudge/blob/main/misc-tools/dj_make_chroot.in#L58-L87
-/opt/domjudge/judgehost/bin/dj_make_chroot -i rustc,mono-mcs
+/opt/domjudge/judgehost/bin/dj_make_chroot -i rustc,mono-mcs,ruby
+
+install -D -m 644 /opt/golfscript.rb /chroot/domjudge/usr/local/lib/golfscript/golfscript.rb
 
 node_root=/chroot/domjudge/usr/local/lib/node-v24.22.2
 kotlin_root=/chroot/domjudge/usr/local/lib/kotlin-2.2.20

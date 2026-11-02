@@ -46,6 +46,10 @@ ADD --checksum=sha256:81f0264c9073b5cbbdb3ff8418cf2c5dac076879fc156fa1a6462f5a5a
 	https://github.com/JetBrains/kotlin/releases/download/v2.2.20/kotlin-compiler-2.2.20.zip \
 	/opt/kotlin-compiler.zip
 
+ADD --checksum=sha256:84f932a624b19afe6ef2a3ebe09a9b832f765a87460a79cde22323615c468f38 \
+	https://raw.githubusercontent.com/darrenks/golfscript/cded542533c2c8f72ab2d5935714f739b0357690/golfscript.rb \
+	/opt/golfscript.rb
+
 # We need to mount proc, which is not possible in "docker build". Thus we need to run this when starting the container
 COPY ["judgehost/chroot-and-tar.sh", "/scripts/"]
 CMD ["/scripts/chroot-and-tar.sh"]
